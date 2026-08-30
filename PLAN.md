@@ -149,6 +149,12 @@ API route. Viewer gallery grouped by topic; player page with end-of-video
 takeover; mobile-friendly layout. *Exit criteria: a child on a tablet can
 browse and watch only whitelisted soccer/baseball videos.*
 
+> ⚠️ **Model checkpoint (mid-phase):** the gallery, seed data, and refresh
+> route are Sonnet work. Before starting the **player page and gating logic**
+> (IFrame wiring, end-of-video takeover, iOS `playsinline`/fullscreen
+> handling, error 101/150 handling), **stop and ask Corey to switch to
+> Opus 4.8**. Switch back to Sonnet once the player passes the exit criteria.
+
 **Phase 2 — Admin UI (2–3 days)**
 Auth, topic/source CRUD with URL-resolution + preview, per-video veto,
 refresh-now, Vercel cron for hourly refresh. *Exit criteria: parent manages
@@ -172,7 +178,34 @@ fetched video with keyword rules first, LLM (Claude Haiku) second, and hide
 low-confidence items pending admin review. Designed as a filter on the
 refresh pipeline, so it bolts on without touching the viewer.
 
-## 7. Risks & mitigations
+## 7. Model assignments & switch checkpoints
+
+> **Instruction to Claude:** this plan is executed across sessions with
+> different models. At every checkpoint marked below, **pause and explicitly
+> ask Corey to switch models** (via the model picker / `/model`) before
+> continuing — do not proceed past a checkpoint on the wrong model. When a
+> phase begins, state which model the plan assigns to it.
+
+| Work | Model | Rationale |
+|---|---|---|
+| Phase 0 — setup & scaffolding | **Sonnet** | Boilerplate: project init, env wiring, Prisma schema. Well-trodden, fully specified by this plan. |
+| Phase 1 — gallery, seed, refresh route | **Sonnet** | Standard Next.js/Prisma CRUD against a documented API. |
+| Phase 1 — **player page & gating logic** | **Opus 4.8** | The leakage-critical part: end-of-video takeover, mobile playback quirks, embed-error edge cases. Subtle mistakes here defeat the whole product. |
+| Phase 2 — admin UI | **Sonnet** | Auth + CRUD forms; the plan already made the design decisions. |
+| Phase 3 — polish & PWA | **Sonnet** | UI polish and smoke tests; escalate only if the Playwright gating-invariant tests uncover real leaks. |
+| Phase 4 — hardening | **Sonnet** | Mostly written guides + config; Opus 4.8 only if building the optional Electron kiosk wrapper. |
+| Phase 5 — classifier (optional) | **Opus 4.8** | Prompt/threshold design and precision-recall judgment calls benefit from the stronger model. |
+| Any debugging going in circles (2+ failed fix attempts on the same bug) | **Opus 4.8** | Standing escalation rule regardless of phase. |
+
+**Checkpoints where Claude must ask Corey to switch:**
+
+1. **Start of project** → confirm **Sonnet** is active before Phase 0.
+2. **Mid-Phase 1**, before the player page/gating work → ask to switch **Sonnet → Opus 4.8**.
+3. **End of Phase 1**, once the player passes exit criteria → ask to switch **Opus 4.8 → Sonnet**.
+4. **Start of Phase 5** (if built) → ask to switch to **Opus 4.8**.
+5. **Escalation rule triggered** (2+ failed attempts on one bug) → ask to switch to **Opus 4.8**; ask to switch back once the bug is fixed.
+
+## 8. Risks & mitigations
 
 | Risk | Mitigation |
 |---|---|
@@ -183,7 +216,7 @@ refresh pipeline, so it bolts on without touching the viewer.
 | Admin UI exposed on public internet | Strong password hash, signed sessions, login rate limiting, no admin data readable without session. |
 | ToS compliance | IFrame API only; no downloading, scraping, or ad-stripping; attribution/thumbnails via API as permitted. |
 
-## 8. Open items (non-blocking, decide during build)
+## 9. Open items (non-blocking, decide during build)
 
 - Exact starter channel list for soccer + baseball (parent to pick; seed
   suggestions provided in Phase 1).
