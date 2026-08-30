@@ -49,3 +49,19 @@ model Video {
 
   @@index([sourceId])
 }
+
+// Singleton row (id always "singleton") tracking failed admin login attempts.
+// DB-backed so the lockout is consistent across serverless function instances.
+model AdminAuthState {
+  id             String    @id @default("singleton")
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+}
+
+// Singleton row (id always "singleton") recording the outcome of the last catalog refresh,
+// shown in the admin UI so the parent can see refresh status/errors without checking logs.
+model RefreshLog {
+  id      String   @id @default("singleton")
+  ranAt   DateTime @default(now())
+  results Json // SourceRefreshResult[] from lib/refresh.ts
+}
