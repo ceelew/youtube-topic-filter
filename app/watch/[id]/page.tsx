@@ -5,6 +5,13 @@ import Player from "./Player";
 
 export const dynamic = "force-dynamic";
 
+// Do not add a loading.tsx to this route (or to app/loading.tsx at the root — it cascades
+// here too). A loading.tsx wraps the page in a Suspense boundary, which starts streaming a
+// 200 response before notFound() below can resolve; the HTTP status can't change once
+// streaming has begun, so gated requests would report 200 while still correctly rendering
+// the not-found UI. Confirmed via Next.js's own docs (notFound() "Calling after streaming
+// has started") and by curl: this exact regression happened once already in this project.
+// Covered by tests/gating.spec.ts.
 export default async function WatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 

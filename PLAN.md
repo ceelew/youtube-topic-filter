@@ -164,9 +164,19 @@ refresh-now, Vercel cron for daily refresh. *Exit criteria: parent manages
 everything from the browser; no code edits needed.*
 
 **Phase 3 — Polish (1–2 days)**
-PWA install flow; empty/error states; loading skeletons; basic
-watch-continuity ("recently played"); Playwright smoke tests for the gating
-invariants (no unvetted video ID can reach the player).
+PWA install flow; empty/error states; basic watch-continuity ("recently
+played"); Playwright smoke tests for the gating invariants (no unvetted
+video ID can reach the player).
+
+> **Note (found during Phase 3):** deliberately no `loading.tsx` anywhere in
+> this app. A `loading.tsx` wraps its route in a Suspense boundary, which
+> starts streaming a 200 response before `notFound()`/`redirect()` can
+> resolve — the HTTP status can't change once streaming has begun. This
+> silently turned `/watch/[id]`'s 404 gate into a fake 200 (page content was
+> still correct, but the status code lied) the first time it was tried here.
+> Confirmed via Next's own docs and caught by `tests/gating.spec.ts`. Do not
+> reintroduce loading states on routes that call `notFound()`/`redirect()`
+> without re-verifying status codes.
 
 **Phase 4 — Hardening (later, as decided)**
 Written setup guide for iOS **Guided Access** / Android **screen pinning** on

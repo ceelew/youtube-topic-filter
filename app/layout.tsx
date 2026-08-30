@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Watch",
   description: "A curated, topic-restricted YouTube player.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Watch",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#fafafa",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDuration } from "@/lib/format";
+import { addRecentlyPlayed } from "@/lib/recentlyPlayed";
 
 export interface UpNextVideo {
   id: string;
@@ -95,6 +96,7 @@ export default function Player({ videoId, upNext }: PlayerProps) {
 
     setEnded(false);
     setError(null);
+    addRecentlyPlayed(videoId);
 
     // YT replaces the host node with an iframe; use a throwaway child inside a stable wrapper
     // so re-creation on videoId change never touches a stale/detached node.
