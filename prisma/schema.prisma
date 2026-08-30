@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SourceType {
+  CHANNEL
+  PLAYLIST
+}
+
+model Topic {
+  id      String   @id @default(cuid())
+  name    String
+  order   Int
+  sources Source[]
+}
+
+model Source {
+  id                String     @id @default(cuid())
+  topic             Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topicId           String
+  type              SourceType
+  youtubeId         String // channel ID or playlist ID
+  title             String // resolved display name
+  uploadsPlaylistId String? // resolved once for channels
+  enabled           Boolean    @default(true)
+  videos            Video[]
+
+  @@index([topicId])
+}
+
+model Video {
+  id            String   @id // YouTube video ID
+  source        Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId      String
+  title         String
+  thumbnailUrl  String
+  publishedAt   DateTime
+  durationSec   Int
+  embeddable    Boolean // from videos.list status.embeddable
+  hiddenByAdmin Boolean  @default(false) // per-video veto
+
+  @@index([sourceId])
+}
