@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getVideoDetails, listPlaylistVideos } from "@/lib/youtube";
+import type { Prisma } from "@/app/generated/prisma/client";
 
 const VIDEOS_PER_SOURCE = 30;
 
@@ -76,5 +77,18 @@ export async function refreshAllSources(): Promise<SourceRefreshResult[]> {
   for (const source of sources) {
     results.push(await refreshSource(source.id));
   }
+  return results;
+}
+
+/** Refresh everything and record the outcome in the singleton RefreshLog row, so the
+ *  admin dashboard can show "last refreshed" + any errors regardless of whether the
+ *  refresh was triggered by the admin's "Refresh now" button or the hourly cron. */
+export async function refreshAllSourcesAndLog(): Promise<SourceRefreshResult[]> {
+  const results = await refreshAllSources();
+  await prisma.refreshLog.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", results: results as unknown as Prisma.InputJsonValue },
+    update: { ranAt: new Date(), results: results as unknown as Prisma.InputJsonValue },
+  });
   return results;
 }

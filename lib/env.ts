@@ -19,4 +19,7 @@ export const env = {
   get SESSION_SECRET() {
     return required("SESSION_SECRET");
   },
+  get CRON_SECRET() {
+    return required("CRON_SECRET");
+  },
 };

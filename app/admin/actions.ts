@@ -7,8 +7,7 @@ import { getSession, requireAdminSession } from "@/lib/session";
 import { attemptAdminLogin } from "@/lib/adminAuth";
 import { parseSourceInput } from "@/lib/parseSourceInput";
 import { resolveChannel, resolvePlaylist, listPlaylistVideos, type PlaylistVideoStub } from "@/lib/youtube";
-import { refreshAllSources, refreshSource } from "@/lib/refresh";
-import type { Prisma } from "@/app/generated/prisma/client";
+import { refreshAllSourcesAndLog, refreshSource } from "@/lib/refresh";
 
 export interface LoginFormState {
   error?: string;
@@ -194,13 +193,7 @@ export async function setVideoHiddenAction(videoId: string, hidden: boolean): Pr
 
 export async function refreshNowAction(): Promise<void> {
   await requireAdminSession();
-  const results = await refreshAllSources();
-  const resultsJson = results as unknown as Prisma.InputJsonValue;
-  await prisma.refreshLog.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", results: resultsJson },
-    update: { ranAt: new Date(), results: resultsJson },
-  });
+  await refreshAllSourcesAndLog();
   revalidatePath("/admin");
   revalidatePath("/");
 }
