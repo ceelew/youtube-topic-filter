@@ -39,7 +39,7 @@ Tablet browser ──► Next.js app (Vercel)
                     ├─ /            viewer gallery + player (reads cached catalog)
                     ├─ /admin       whitelist management (cookie-auth)
                     ├─ /api/*       server routes (session-checked where needed)
-                    └─ cron (hourly) ─► YouTube Data API ─► catalog refresh
+                    └─ cron (daily) ─► YouTube Data API ─► catalog refresh
                                              │
                                        Neon Postgres
                                 (topics, sources, cached videos)
@@ -97,7 +97,10 @@ The Data API gives 10,000 units/day; `search.list` costs 100 units but
    drop non-embeddable videos and YouTube Shorts if undesired (filter by
    duration).
 
-Even 50 sources refreshed hourly stays under ~150 units/hour — far inside quota.
+Even 50 sources refreshed daily stays under ~150 units/day — far inside quota.
+(Cron runs daily rather than hourly because Vercel's free Hobby plan limits
+cron jobs to once per day; the "Refresh now" admin button covers on-demand
+updates in between.)
 
 ## 4. Playback gating details (the part that's easy to get wrong)
 
@@ -157,7 +160,7 @@ browse and watch only whitelisted soccer/baseball videos.*
 
 **Phase 2 — Admin UI (2–3 days)**
 Auth, topic/source CRUD with URL-resolution + preview, per-video veto,
-refresh-now, Vercel cron for hourly refresh. *Exit criteria: parent manages
+refresh-now, Vercel cron for daily refresh. *Exit criteria: parent manages
 everything from the browser; no code edits needed.*
 
 **Phase 3 — Polish (1–2 days)**
