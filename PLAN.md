@@ -19,13 +19,13 @@ A cloud-hosted web app with two faces:
 
 Enforcement is **soft** in v1: the app only *shows* approved content; it does
 not prevent the child from opening youtube.com in another tab. Hardening
-(home-screen PWA + OS-level screen pinning, optional kiosk shell) is Phase 4.
+(home-screen PWA + iOS Guided Access) is Phase 4.
 
 ## 2. Stack & hosting
 
 | Concern | Choice | Why |
 |---|---|---|
-| Framework | **Next.js (App Router, TypeScript)** | Viewer, admin UI, and server API routes in one codebase; the YouTube API key stays server-side; first-class Vercel deploys; easy to wrap in Electron/kiosk later. |
+| Framework | **Next.js (App Router, TypeScript)** | Viewer, admin UI, and server API routes in one codebase; the YouTube API key stays server-side; first-class Vercel deploys; installable as a home-screen PWA on iOS. |
 | Hosting | **Vercel** (free tier is enough) | One-command deploy, built-in cron for content refresh, HTTPS by default (required for PWA install). |
 | Database | **Postgres via Neon** (free tier) + **Prisma** | Serverless-friendly persistence for the whitelist and the cached video catalog. SQLite doesn't survive serverless; a JSON file can't be edited from an admin UI in production. |
 | Admin auth | Single admin password (env var, bcrypt-hashed) + **iron-session** signed cookie | One parent, one credential — no user-account system needed. Rate-limit login attempts. |
@@ -178,12 +178,21 @@ video ID can reach the player).
 > reintroduce loading states on routes that call `notFound()`/`redirect()`
 > without re-verifying status codes.
 
-**Phase 4 — Hardening (later, as decided)**
-Written setup guide for iOS **Guided Access** / Android **screen pinning** on
-the child's tablet (locks the device to the installed PWA — this is the
-realistic "hard mode" on mobile). Optional Electron kiosk wrapper for a
-computer/TV. Optionally block youtube.com at home DNS as a belt-and-braces
-measure.
+**Phase 4 — Hardening (complete)**
+Target devices are iOS only — iPhone and iPad (no Android). Written setup
+guide for **Guided Access** on the child's device (locks it to the
+installed PWA — this is the realistic "hard mode" on iOS), plus optional
+DNS-level blocking as a belt-and-braces measure. See
+[`docs/ios-hardening.md`](docs/ios-hardening.md).
+
+> **Apple TV (deferred):** the household also has an Apple TV, but tvOS has
+> no general-purpose Safari the way iOS/iPadOS does, so this app can't just
+> be "opened" or "added to the home screen" there. The realistic path is
+> AirPlay-mirroring the PWA from an iPhone/iPad; a native tvOS app (Swift/
+> Xcode, TestFlight or sideload distribution, ongoing Apple Developer
+> account upkeep) is a meaningfully bigger, separate project and is out of
+> scope unless explicitly requested later. Not part of Phase 4 for now —
+> get iPhone/iPad hardening solid first.
 
 **Phase 5 (optional) — Classifier layer**
 Only if source-trust proves insufficient: score title/description of each
@@ -206,7 +215,7 @@ refresh pipeline, so it bolts on without touching the viewer.
 | Phase 1 — **player page & gating logic** | **Opus 4.8** | The leakage-critical part: end-of-video takeover, mobile playback quirks, embed-error edge cases. Subtle mistakes here defeat the whole product. |
 | Phase 2 — admin UI | **Sonnet** | Auth + CRUD forms; the plan already made the design decisions. |
 | Phase 3 — polish & PWA | **Sonnet** | UI polish and smoke tests; escalate only if the Playwright gating-invariant tests uncover real leaks. |
-| Phase 4 — hardening | **Sonnet** | Mostly written guides + config; Opus 4.8 only if building the optional Electron kiosk wrapper. |
+| Phase 4 — hardening | **Sonnet** | Written guides (Guided Access setup) + PWA/DNS config; no code complex enough to warrant Opus. |
 | Phase 5 — classifier (optional) | **Opus 4.8** | Prompt/threshold design and precision-recall judgment calls benefit from the stronger model. |
 | Any debugging going in circles (2+ failed fix attempts on the same bug) | **Opus 4.8** | Standing escalation rule regardless of phase. |
 
