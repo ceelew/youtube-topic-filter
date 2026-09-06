@@ -43,6 +43,7 @@ export async function refreshSource(sourceId: string): Promise<SourceRefreshResu
           id: stub.videoId,
           sourceId: source.id,
           title: stub.title,
+          description: stub.description,
           thumbnailUrl: stub.thumbnailUrl,
           publishedAt: new Date(stub.publishedAt),
           durationSec: detail.durationSec,
@@ -50,6 +51,7 @@ export async function refreshSource(sourceId: string): Promise<SourceRefreshResu
         },
         update: {
           title: stub.title,
+          description: stub.description,
           thumbnailUrl: stub.thumbnailUrl,
           durationSec: detail.durationSec,
           embeddable: detail.embeddable,

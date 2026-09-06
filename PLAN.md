@@ -242,6 +242,30 @@ refresh pipeline, so it bolts on without touching the viewer.
 
 - Exact starter channel list for soccer + baseball (parent to pick; seed
   suggestions provided in Phase 1).
-- Whether Shorts are included or filtered out by duration.
+- ~~Whether Shorts are included or filtered out by duration.~~ **Resolved**
+  — see section 10, duration filter.
 - Whether viewer needs a "request a channel" flow (child suggests, parent
   approves) — cheap to add in Phase 2 if wanted.
+
+## 10. Post-launch changes (after Phase 4)
+
+**Duration filter.** Videos under 60 seconds (Shorts-length clips) are
+excluded from every playback surface — the gallery, direct `/watch/[id]`
+URLs, and up-next — via a shared `MIN_DURATION_SEC` constant in
+`lib/catalog.ts`, applied identically to `embeddable`/`hiddenByAdmin`. The
+YouTube Data API has no official `isShort` flag, so duration is the only
+practical signal; it's a heuristic, not a guarantee (some legitimate short
+clips get excluded, and YouTube's own Shorts ceiling has crept up to 3
+minutes for some videos). The admin per-source video page flags excluded
+videos the same way it already flags non-embeddable ones.
+
+**Search.** Videos now store `description` (from `playlistItems.list`
+snippet — already fetched during refresh, so no new API cost). A search box
+on the gallery queries Postgres full-text search (`to_tsvector`/
+`plainto_tsquery`/`ts_rank`) over title + description, restricted to the
+same whitelist filters as everywhere else (embeddable, not hidden, enabled
+source, ≥60s). This searches the app's own cached catalog, never live
+YouTube — searching YouTube directly would either leak un-whitelisted
+results or reintroduce the `search.list` quota cost the refresh pipeline
+was built to avoid. Search results render as one flat list ranked by
+relevance, not grouped by topic (normal browsing stays topic-grouped).

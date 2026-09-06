@@ -72,6 +72,7 @@ export async function resolvePlaylist(playlistId: string): Promise<{ title: stri
 export interface PlaylistVideoStub {
   videoId: string;
   title: string;
+  description: string;
   thumbnailUrl: string;
   publishedAt: string;
 }
@@ -86,6 +87,7 @@ export async function listPlaylistVideos(
     items?: Array<{
       snippet: {
         title: string;
+        description: string;
         publishedAt: string;
         resourceId: { videoId: string };
         thumbnails: { medium?: { url: string }; default?: { url: string } };
@@ -100,6 +102,7 @@ export async function listPlaylistVideos(
   return (data.items ?? []).map((item) => ({
     videoId: item.snippet.resourceId.videoId,
     title: item.snippet.title,
+    description: item.snippet.description ?? "",
     thumbnailUrl:
       item.snippet.thumbnails.medium?.url ?? item.snippet.thumbnails.default?.url ?? "",
     publishedAt: item.snippet.publishedAt,

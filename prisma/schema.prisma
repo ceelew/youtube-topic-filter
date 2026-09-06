@@ -41,6 +41,7 @@ model Video {
   source        Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   sourceId      String
   title         String
+  description   String   @default("") // from playlistItems.list snippet — used for search
   thumbnailUrl  String
   publishedAt   DateTime
   durationSec   Int

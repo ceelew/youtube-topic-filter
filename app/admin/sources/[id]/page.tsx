@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { formatDuration } from "@/lib/format";
 import { setVideoHiddenAction } from "@/app/admin/actions";
+import { MIN_DURATION_SEC } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,11 @@ export default async function SourceVideosPage({ params }: { params: Promise<{ i
                 {!video.embeddable && (
                   <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                     Not embeddable — hidden from the viewer automatically
+                  </p>
+                )}
+                {video.durationSec < MIN_DURATION_SEC && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Under {MIN_DURATION_SEC}s — hidden from the viewer automatically
                   </p>
                 )}
               </div>

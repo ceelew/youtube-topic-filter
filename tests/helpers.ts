@@ -17,6 +17,27 @@ export async function getAnyPlayableVideoId(): Promise<string | null> {
        FROM "Video" v
        JOIN "Source" s ON s.id = v."sourceId"
        WHERE v.embeddable = true AND v."hiddenByAdmin" = false AND s.enabled = true
+         AND v."durationSec" >= 60
+       LIMIT 1`,
+    );
+    return result.rows[0]?.id ?? null;
+  } finally {
+    await client.end();
+  }
+}
+
+/** Fetch one video ID that's otherwise whitelisted but under the 60s minimum duration —
+ *  for asserting the duration gate itself (not just embeddable/hidden/enabled). */
+export async function getAnyShortVideoId(): Promise<string | null> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query<{ id: string }>(
+      `SELECT v.id
+       FROM "Video" v
+       JOIN "Source" s ON s.id = v."sourceId"
+       WHERE v.embeddable = true AND v."hiddenByAdmin" = false AND s.enabled = true
+         AND v."durationSec" < 60
        LIMIT 1`,
     );
     return result.rows[0]?.id ?? null;

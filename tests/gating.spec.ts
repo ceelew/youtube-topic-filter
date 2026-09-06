@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { getAnyPlayableVideoId } from "./helpers";
+import { getAnyPlayableVideoId, getAnyShortVideoId } from "./helpers";
 
 // These tests exercise the app's core security contract: a viewer can only ever reach
 // video IDs that are on the parent-managed whitelist, and the admin/cron surfaces can't
@@ -32,6 +32,29 @@ test.describe("video playback is gated to the whitelist", () => {
     const response = await page.goto(`/watch/${videoId}`);
     expect(response?.status()).toBe(200);
     await expect(page.locator("iframe")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("a video under 60 seconds 404s even though it's otherwise whitelisted", async ({ page }) => {
+    const videoId = await getAnyShortVideoId();
+    test.skip(!videoId, "No sub-60s videos in the catalog right now.");
+
+    const response = await page.goto(`/watch/${videoId}`);
+    expect(response?.status()).toBe(404);
+  });
+});
+
+test.describe("search", () => {
+  test("matches text that only appears in the description, not the title", async ({ page }) => {
+    // "subscribe" shows up in plenty of YouTube video descriptions but rarely in a
+    // highlight-clip title — a reasonable proxy for "search actually reads description".
+    await page.goto("/?q=subscribe");
+    const heading = page.getByRole("heading", { level: 2 });
+    await expect(heading).toContainText(/results for/i);
+  });
+
+  test("a nonsense query shows the empty state, not an error", async ({ page }) => {
+    await page.goto("/?q=zzzznomatchxyz123");
+    await expect(page.getByText(/no results for/i)).toBeVisible();
   });
 });
 
