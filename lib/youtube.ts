@@ -145,3 +145,19 @@ export async function getVideoDetails(videoIds: string[]): Promise<VideoDetails[
     embeddable: item.status.embeddable,
   }));
 }
+
+/** Batch-fetch descriptions for up to 50 video IDs at once. Costs 1 quota unit per call
+ *  regardless of batch size. Used for one-off backfills — the normal refresh path already
+ *  gets description from listPlaylistVideos, so this isn't on the regular refresh route. */
+export async function getVideoDescriptions(videoIds: string[]): Promise<Map<string, string>> {
+  if (videoIds.length === 0) return new Map();
+
+  const data = await youtubeGet<{
+    items?: Array<{ id: string; snippet: { description: string } }>;
+  }>("videos", {
+    part: "snippet",
+    id: videoIds.slice(0, 50).join(","),
+  });
+
+  return new Map((data.items ?? []).map((item) => [item.id, item.snippet.description ?? ""]));
+}
