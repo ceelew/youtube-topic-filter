@@ -7,7 +7,7 @@ import { getSession, requireAdminSession } from "@/lib/session";
 import { attemptAdminLogin } from "@/lib/adminAuth";
 import { parseSourceInput } from "@/lib/parseSourceInput";
 import { resolveChannel, resolvePlaylist, listPlaylistVideos, type PlaylistVideoStub } from "@/lib/youtube";
-import { refreshAllSourcesAndLog, refreshSource } from "@/lib/refresh";
+import { refreshAllSourcesAndLog, refreshSource, classifyPendingForSource } from "@/lib/refresh";
 
 export interface LoginFormState {
   error?: string;
@@ -180,8 +180,10 @@ export async function toggleSourceAction(sourceId: string, enabled: boolean): Pr
 
 /** Flip a source into "mixed content" mode: it no longer has one source-level topic — every
  *  video gets classified on its own instead. Existing videos (currently INHERITED, since the
- *  source used to be single-topic) go to PENDING so the next refresh classifies them; nothing
- *  is shown to the viewer until that happens. */
+ *  source used to be single-topic) are marked PENDING and classified immediately (not left
+ *  for the next scheduled refresh) — most resolve automatically (matched or excluded); only
+ *  genuinely ambiguous ones are left PENDING for manual review. This action's page sets
+ *  maxDuration=60 to give a full batch of Haiku calls room to finish. */
 export async function enableMixedModeAction(sourceId: string): Promise<void> {
   await requireAdminSession();
   await prisma.$transaction([
@@ -191,6 +193,7 @@ export async function enableMixedModeAction(sourceId: string): Promise<void> {
       data: { classification: "PENDING" },
     }),
   ]);
+  await classifyPendingForSource(sourceId);
   revalidatePath("/admin");
   revalidatePath("/");
 }

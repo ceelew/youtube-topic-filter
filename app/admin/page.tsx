@@ -20,6 +20,10 @@ import ConfirmSubmitButton from "./ConfirmSubmitButton";
 import RefreshButton from "./RefreshButton";
 
 export const dynamic = "force-dynamic";
+// Flipping a source to "mixed content" classifies all its videos synchronously (see
+// enableMixedModeAction) — a fresh 30-video channel needs a couple of Haiku calls in a row,
+// which can run past the platform's default Server Action timeout without this.
+export const maxDuration = 60;
 
 export default async function AdminDashboard() {
   const session = await getSession();
@@ -212,8 +216,9 @@ export default async function AdminDashboard() {
                   </form>
                   <form action={enableMixedModeAction.bind(null, source.id)}>
                     <ConfirmSubmitButton
-                      confirmMessage={`"${source.title}" posts mixed content? This will hide its videos until each one is sorted into a topic (automatically, or by you).`}
-                      className="min-h-[40px] rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-700 active:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:active:bg-zinc-800"
+                      confirmMessage={`"${source.title}" posts mixed content? Its videos will be sorted into topics automatically — this can take a few seconds. Anything the classifier isn't confident about is held for your review instead of guessed.`}
+                      pendingLabel="Sorting…"
+                      className="min-h-[40px] rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-700 active:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:active:bg-zinc-800"
                     >
                       Mixed content?
                     </ConfirmSubmitButton>

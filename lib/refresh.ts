@@ -19,7 +19,7 @@ export interface SourceRefreshResult {
  *  (surfaced to the admin review queue). Videos already CLASSIFIED/MANUAL/EXCLUDED are left
  *  alone — we never re-classify a settled or admin-decided video. Returns how many were
  *  (re)decided this run. */
-async function classifyPendingForSource(sourceId: string): Promise<number> {
+export async function classifyPendingForSource(sourceId: string): Promise<number> {
   const pending = await prisma.video.findMany({
     where: { sourceId, classification: "PENDING" },
     select: { id: true, title: true, description: true },
