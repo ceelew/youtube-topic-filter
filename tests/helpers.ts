@@ -45,3 +45,62 @@ export async function getAnyShortVideoId(): Promise<string | null> {
     await client.end();
   }
 }
+
+/** Fetch a video from a mixed source that the classifier (or admin) confidently excluded —
+ *  for asserting EXCLUDED never reaches the viewer even though it's embeddable/long/enabled. */
+export async function getAnyExcludedVideoId(): Promise<string | null> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query<{ id: string }>(
+      `SELECT v.id
+       FROM "Video" v
+       JOIN "Source" s ON s.id = v."sourceId"
+       WHERE v.classification = 'EXCLUDED' AND s."multiTopic" = true
+       LIMIT 1`,
+    );
+    return result.rows[0]?.id ?? null;
+  } finally {
+    await client.end();
+  }
+}
+
+/** Fetch a video from a mixed source still awaiting admin review — for asserting PENDING is
+ *  hidden (uncertain content must never be shown, only reviewed content). */
+export async function getAnyPendingVideoId(): Promise<string | null> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query<{ id: string }>(
+      `SELECT v.id
+       FROM "Video" v
+       JOIN "Source" s ON s.id = v."sourceId"
+       WHERE v.classification = 'PENDING' AND s."multiTopic" = true
+       LIMIT 1`,
+    );
+    return result.rows[0]?.id ?? null;
+  } finally {
+    await client.end();
+  }
+}
+
+/** Fetch a video from a mixed source that the classifier confidently assigned to a topic —
+ *  for asserting CLASSIFIED videos ARE playable (the whole point of the feature). */
+export async function getAnyClassifiedVideoId(): Promise<string | null> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query<{ id: string }>(
+      `SELECT v.id
+       FROM "Video" v
+       JOIN "Source" s ON s.id = v."sourceId"
+       WHERE v.classification IN ('CLASSIFIED', 'MANUAL') AND v."topicId" IS NOT NULL
+         AND v.embeddable = true AND v."hiddenByAdmin" = false AND s.enabled = true
+         AND v."durationSec" >= 60
+       LIMIT 1`,
+    );
+    return result.rows[0]?.id ?? null;
+  } finally {
+    await client.end();
+  }
+}

@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { getAnyPlayableVideoId, getAnyShortVideoId } from "./helpers";
+import {
+  getAnyPlayableVideoId,
+  getAnyShortVideoId,
+  getAnyExcludedVideoId,
+  getAnyPendingVideoId,
+  getAnyClassifiedVideoId,
+} from "./helpers";
 
 // These tests exercise the app's core security contract: a viewer can only ever reach
 // video IDs that are on the parent-managed whitelist, and the admin/cron surfaces can't
@@ -37,6 +43,35 @@ test.describe("video playback is gated to the whitelist", () => {
   test("a video under 60 seconds 404s even though it's otherwise whitelisted", async ({ page }) => {
     const videoId = await getAnyShortVideoId();
     test.skip(!videoId, "No sub-60s videos in the catalog right now.");
+
+    const response = await page.goto(`/watch/${videoId}`);
+    expect(response?.status()).toBe(404);
+  });
+});
+
+test.describe("mixed-source classification is gated the same way", () => {
+  test("a classified video from a mixed source plays", async ({ page }) => {
+    const videoId = await getAnyClassifiedVideoId();
+    test.skip(!videoId, "No classified mixed-source videos yet — flag a source multiTopic first.");
+
+    const response = await page.goto(`/watch/${videoId}`);
+    expect(response?.status()).toBe(200);
+    await expect(page.locator("iframe")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("a confidently-excluded video 404s even though it's embeddable and long enough", async ({
+    page,
+  }) => {
+    const videoId = await getAnyExcludedVideoId();
+    test.skip(!videoId, "No excluded mixed-source videos yet.");
+
+    const response = await page.goto(`/watch/${videoId}`);
+    expect(response?.status()).toBe(404);
+  });
+
+  test("a video still awaiting review (PENDING) 404s — uncertain is never shown", async ({ page }) => {
+    const videoId = await getAnyPendingVideoId();
+    test.skip(!videoId, "Nothing pending review right now.");
 
     const response = await page.goto(`/watch/${videoId}`);
     expect(response?.status()).toBe(404);

@@ -51,8 +51,9 @@ export async function renameTopicAction(topicId: string, formData: FormData): Pr
   await requireAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
+  const keywords = String(formData.get("keywords") ?? "").trim();
 
-  await prisma.topic.update({ where: { id: topicId }, data: { name } });
+  await prisma.topic.update({ where: { id: topicId }, data: { name, keywords } });
   revalidatePath("/admin");
 }
 
@@ -173,6 +174,81 @@ export async function confirmAddSourceAction(
 export async function toggleSourceAction(sourceId: string, enabled: boolean): Promise<void> {
   await requireAdminSession();
   await prisma.source.update({ where: { id: sourceId }, data: { enabled } });
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+/** Flip a source into "mixed content" mode: it no longer has one source-level topic — every
+ *  video gets classified on its own instead. Existing videos (currently INHERITED, since the
+ *  source used to be single-topic) go to PENDING so the next refresh classifies them; nothing
+ *  is shown to the viewer until that happens. */
+export async function enableMixedModeAction(sourceId: string): Promise<void> {
+  await requireAdminSession();
+  await prisma.$transaction([
+    prisma.source.update({ where: { id: sourceId }, data: { multiTopic: true, topicId: null } }),
+    prisma.video.updateMany({
+      where: { sourceId, classification: "INHERITED" },
+      data: { classification: "PENDING" },
+    }),
+  ]);
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+/** Flip a mixed source back to single-topic. Every video reverts to INHERITED (following the
+ *  chosen topic), discarding any prior per-video classification — the admin is now trusting the
+ *  whole channel for one topic again, same as any other single-topic source. */
+export async function disableMixedModeAction(sourceId: string, formData: FormData): Promise<void> {
+  await requireAdminSession();
+  const topicId = String(formData.get("topicId") ?? "");
+  if (!topicId) return;
+
+  await prisma.$transaction([
+    prisma.source.update({ where: { id: sourceId }, data: { multiTopic: false, topicId } }),
+    prisma.video.updateMany({
+      where: { sourceId },
+      data: { classification: "INHERITED", topicId: null },
+    }),
+  ]);
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+/** Admin manually assigns a video to a topic — locks it as MANUAL so refresh never
+ *  re-classifies or overwrites the decision. Used both to resolve the PENDING review queue
+ *  and to correct a CLASSIFIED/EXCLUDED video the classifier got wrong. */
+export async function assignVideoTopicAction(videoId: string, formData: FormData): Promise<void> {
+  await requireAdminSession();
+  const topicId = String(formData.get("topicId") ?? "");
+  if (!topicId) return;
+
+  await prisma.video.update({
+    where: { id: videoId },
+    data: { classification: "MANUAL", topicId },
+  });
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+/** Admin confirms a video doesn't belong to any topic — same effect as the classifier's
+ *  no_match, but locked in (won't be re-classified). */
+export async function excludeVideoAction(videoId: string): Promise<void> {
+  await requireAdminSession();
+  await prisma.video.update({
+    where: { id: videoId },
+    data: { classification: "EXCLUDED", topicId: null },
+  });
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+/** Undo a MANUAL or EXCLUDED call — puts the video back in the PENDING review queue. */
+export async function resetVideoToPendingAction(videoId: string): Promise<void> {
+  await requireAdminSession();
+  await prisma.video.update({
+    where: { id: videoId },
+    data: { classification: "PENDING", topicId: null },
+  });
   revalidatePath("/admin");
   revalidatePath("/");
 }
