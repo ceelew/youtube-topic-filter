@@ -15,17 +15,33 @@ enum SourceType {
   PLAYLIST
 }
 
+// How a video's topic was determined, and whether it should be shown to the viewer.
+// Playable states (shown, subject to the other gates): INHERITED, CLASSIFIED, MANUAL.
+// Hidden states: PENDING (uncertain — awaiting admin review), EXCLUDED (confidently off-topic).
+enum VideoClassification {
+  INHERITED // single-topic source: effective topic is source.topicId; no classifier ran
+  CLASSIFIED // mixed source: classifier confidently assigned video.topicId
+  MANUAL // admin set video.topicId by hand; never re-classified on refresh
+  PENDING // mixed source: classifier was unsure; hidden until admin reviews
+  EXCLUDED // mixed source: classifier was confident it matches no topic; hidden
+}
+
 model Topic {
-  id      String   @id @default(cuid())
-  name    String
-  order   Int
-  sources Source[]
+  id       String   @id @default(cuid())
+  name     String
+  order    Int
+  keywords String   @default("") // comma-separated hints for the classifier's keyword pass
+  sources  Source[] // single-topic sources whose videos inherit this topic
+  videos   Video[] // videos individually assigned to this topic (from mixed sources / manual)
 }
 
 model Source {
   id                String     @id @default(cuid())
-  topic             Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  topicId           String
+  // Single-topic sources set topicId (every video inherits it). Mixed sources leave it null
+  // and set multiTopic=true, so each video is classified into its own topic instead.
+  topic             Topic?     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topicId           String?
+  multiTopic        Boolean    @default(false)
   type              SourceType
   youtubeId         String // channel ID or playlist ID
   title             String // resolved display name
@@ -37,18 +53,24 @@ model Source {
 }
 
 model Video {
-  id            String   @id // YouTube video ID
-  source        Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  sourceId      String
-  title         String
-  description   String   @default("") // from playlistItems.list snippet — used for search
-  thumbnailUrl  String
-  publishedAt   DateTime
-  durationSec   Int
-  embeddable    Boolean // from videos.list status.embeddable
-  hiddenByAdmin Boolean  @default(false) // per-video veto
+  id             String              @id // YouTube video ID
+  source         Source              @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId       String
+  // Set for CLASSIFIED / MANUAL videos (from mixed sources). Null for INHERITED videos,
+  // which resolve their topic from source.topicId instead. See lib/catalog.ts.
+  topic          Topic?              @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  topicId        String?
+  classification VideoClassification @default(INHERITED)
+  title          String
+  description    String              @default("") // from playlistItems.list snippet — used for search
+  thumbnailUrl   String
+  publishedAt    DateTime
+  durationSec    Int
+  embeddable     Boolean // from videos.list status.embeddable
+  hiddenByAdmin  Boolean             @default(false) // per-video veto
 
   @@index([sourceId])
+  @@index([topicId])
 }
 
 // Singleton row (id always "singleton") tracking failed admin login attempts.

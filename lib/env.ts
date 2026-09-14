@@ -22,4 +22,7 @@ export const env = {
   get CRON_SECRET() {
     return required("CRON_SECRET");
   },
+  get ANTHROPIC_API_KEY() {
+    return required("ANTHROPIC_API_KEY");
+  },
 };

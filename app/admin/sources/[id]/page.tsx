@@ -32,7 +32,9 @@ export default async function SourceVideosPage({ params }: { params: Promise<{ i
           ← Back to admin
         </Link>
         <h1 className="mt-1 text-xl font-bold text-zinc-900 dark:text-zinc-50">{source.title}</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{source.topic.name}</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          {source.multiTopic ? "Mixed content" : (source.topic?.name ?? "No topic")}
+        </p>
       </header>
 
       <div className="mt-4 grid grid-cols-1 gap-3 px-4 sm:grid-cols-2 lg:grid-cols-3">
